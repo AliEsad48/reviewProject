@@ -1,0 +1,99 @@
+/* eslint-disable react-hooks/rules-of-hooks */
+import { Button, Form, Spinner } from "react-bootstrap";
+import { StyledCard, StyledBackground } from "./index.styles";
+import { useNavigate } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { login, requestToken } from "../../api/api-service";
+import { useState } from "react";
+export default function index() {
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const initialValues = {
+    username: "",
+    password: "",
+  };
+
+  const validationSchema = Yup.object({
+    username: Yup.string().required("Please enter your username"),
+    password: Yup.string().required("Please enter your password").min(7),
+  });
+
+  const onSubmit = (values) => {
+    setLoading(true);
+
+    console.log(values);
+
+    requestToken().then((respToken) => {
+      console.log(respToken.data.request_token);
+
+      console.log(values);
+
+      values["request_token"] = `${respToken.data.request_token}`;
+
+      console.log(values);
+
+      login(values)
+        .then((resp) => {
+          console.log(resp.data.request_token);
+
+          localStorage.setItem("token", resp.data.request_token);
+          setLoading(false);
+          navigate("/movies");
+        })
+        .catch((err) => {
+          console.log(err.response.data.status_message);
+          setLoading(false);
+        });
+    });
+  };
+
+  const formik = useFormik({
+    initialValues,
+    validationSchema,
+    onSubmit,
+  });
+
+  return (
+    <StyledBackground>
+      <StyledCard>
+        {" "}
+        <Form noValidate onSubmit={formik.handleSubmit} className="form-group">
+          <Form.Group className="mb-3" controlId="formBasicEmail">
+            <Form.Label>Username</Form.Label>
+            <Form.Control
+              type="text"
+              autoFocus="autofocus"
+              placeholder="Username"
+              {...formik.getFieldProps("username")}
+              isInvalid={!!formik.errors.username}
+            />
+            <Form.Control.Feedback type="invalid">
+              {formik.errors.username}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group
+            className="mb-3 form-group-passwords"
+            controlId="formBasicPassword"
+          >
+            <Form.Label>Password</Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Password"
+              {...formik.getFieldProps("password")}
+              isInvalid={!!formik.errors.password}
+            />
+            <Form.Control.Feedback type="invalid">
+              {formik.errors.password}
+            </Form.Control.Feedback>
+          </Form.Group>
+          <Button variant="dark" size="lg" type="submit" disabled={loading}>
+            {loading && <Spinner animation="border" size="sm" />} Login
+          </Button>
+        </Form>
+      </StyledCard>
+    </StyledBackground>
+  );
+}
